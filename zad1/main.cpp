@@ -12,20 +12,25 @@
 
 // constants
 //#define N 2
+
+
+
 void *thread_function(void * arg)
 {
-    long int sum = 0;
-    long int passed_arg = *((long int*) arg);
+     int sum = 0;
+    int passed_arg = *(( int*) arg);
+   
     std::cout << "thread "<< passed_arg  << " is working "<<std::endl;
-    for(long int i=0; i<=passed_arg; i++)
+    for( int i=0; i<=passed_arg; i++)
     {
-        sum+=i*i;
+        sum+=i*i+ i*10;
         int random =rand()%10 +1 ; 
-        if( random % 2 == 0)
+    
+        if( random % 3 == 0)
         {
-            std::cout << "thread "<< passed_arg  << " is sleeping "<<sum <<std::endl;
+            std::cout << "thread "<< passed_arg  << " is sleeping. Counted sum: "<< sum << std::endl;
             sleep(random);
-            std::cout << "thread "<< passed_arg << " is working again "<<std::endl;
+            std::cout << "thread "<< passed_arg  << " is working again "<< std::endl;
         }
         
     }
@@ -59,12 +64,14 @@ int main(int argc, char **argv){
     if(n_threads == -1){
         return -1;
     }
+    std::cout << "Simulation is starting. Numb of simulated threads: "<< n_threads << std::endl;
     srand(time(NULL));
     pthread_t thread[n_threads];
-    for(long int i= 0; i< n_threads; i++)
+    for(int i= 0; i< n_threads; i++)
+    {
         pthread_create(&thread[i], NULL, thread_function, (void *)&i);
-    std::cout << "Hello worlds" << std::endl;
+    }
     for(int i=0; i< n_threads; i++)
         pthread_join(thread[i], NULL);
-
+    std::cout <<"Simulation has ended" << std:: endl;
 }
