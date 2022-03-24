@@ -2,7 +2,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
-
+#include <vector>
 
 //C libraries
 #include <pthread.h>
@@ -26,15 +26,13 @@ void *thread_function(void * arg)
         sum+=i*i+ i*10;
         int random =rand()%10 +1 ; 
     
-        if( random % 3 == 0)
-        {
-            std::cout << "thread "<< passed_arg  << " is sleeping. Counted sum: "<< sum << std::endl;
-            sleep(random);
-            std::cout << "thread "<< passed_arg  << " is working again "<< std::endl;
-        }
+        std::cout << "thread "<< passed_arg  << " is sleeping. Counted sum: "<< sum << std::endl;
+        sleep(random);
+        std::cout << "thread "<< passed_arg  << " is working again "<< std::endl;
+        
         
     }
-    std::cout << "Thread id: "<<  passed_arg << "has finished."  <<" Counted function sum: " << sum << std::endl;
+    std::cout << "Thread id: "<<  passed_arg << " has finished."  <<" Counted function sum: " << sum << std::endl;
     pthread_exit(NULL);
 }
 int convert_argument_to_int(std::string arg){
@@ -66,12 +64,16 @@ int main(int argc, char **argv){
     }
     std::cout << "Simulation is starting. Numb of simulated threads: "<< n_threads << std::endl;
     srand(time(NULL));
-    pthread_t thread[n_threads];
+    std::vector<pthread_t> threadsVector(n_threads);
+    int* table = new int[n_threads];
+    // pthread_t thread[n_threads];
     for(int i= 0; i< n_threads; i++)
     {
-        pthread_create(&thread[i], NULL, thread_function, (void *)&i);
+        table[i]  = i;
+        pthread_create(&threadsVector[i], NULL, thread_function, (void *)&table[i]);
     }
     for(int i=0; i< n_threads; i++)
-        pthread_join(thread[i], NULL);
+        pthread_join(threadsVector[i], NULL);
     std::cout <<"Simulation has ended" << std:: endl;
+    delete []table;
 }
