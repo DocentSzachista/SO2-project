@@ -8,12 +8,17 @@
 #include <chrono>
 
 // constant ammount of threads to be created
-#define N 10
+#define N 5
+struct Fork {
+    std::mutex mutex;
+};
+
+
 
 class Philosopher {
     public:
 
-    Philosopher( int id, std::mutex* left, std::mutex* right): 
+    Philosopher( int id, Fork & left, Fork & right): 
         phId(id), leftHand(left), rightHand(right){}
 
     void dine() {
@@ -32,23 +37,11 @@ class Philosopher {
     }
 
     void eat(){
-
-        if(leftHand && rightHand){
-            std::unique_lock<std::mutex> left(*leftHand,  std::defer_lock );
-            std::unique_lock<std::mutex> right(*rightHand, std::defer_lock );
-            
-            std::lock(left, right);
-            
-            action("eating");
-            
-            left.unlock();
-            right.unlock();
-        }
-        else{
-            action("Sleeping");
-        }
-
-        
+        // lock mutexes
+        std::lock(leftHand.mutex, rightHand.mutex);
+        std::lock_guard<std::mutex> left_lock(leftHand.mutex, std::adopt_lock);
+        std::lock_guard<std::mutex> right_lock(rightHand.mutex, std::adopt_lock);   
+        action("eating");
     }
     
     void action(std::string action){
@@ -65,8 +58,9 @@ class Philosopher {
 
     }
     private:
-    std::mutex *leftHand;
-    std::mutex *rightHand;
+    
+    Fork& leftHand;
+    Fork& rightHand;
     int phId ;
 };
 
@@ -76,33 +70,62 @@ int lefHand(int i){
     return i;
 }
 
-int rightHand(int i){
-    return (1 + i)%N;
+int rightHand(int i, int n_forks){
+    return (1 + i)%n_forks;
+}
+int convert_argument_to_int(std::string arg){
+    int x = -1;
+    try {
+        std::size_t pos;
+        x = std::stoi(arg, &pos);
+        
+    } catch (std::invalid_argument const &ex) {
+        std::cerr << "Invalid number: " << arg << '\n';
+    } catch (std::out_of_range const &ex) {
+        std::cerr << "Number out of range: " << arg << '\n';
+    }
+    return x;
 }
 
-int main() {
+int main(int argc, char **argv) {
     
+    if(argc != 3 ){
+        std::cout<< "Insuficient ammount of commandline arguments. Please add a number of threads that you wish to launch" << std::endl;
+        return -1;
+    }
+    std::string arg = argv[1];
+    std::string arg_2 = argv[2];
+    int n_threads = convert_argument_to_int(arg);
+    int n_forks = convert_argument_to_int(arg_2);;
+    if(n_threads == -1 || n_forks == -1){
+        return -1;
+    } else if(n_forks < n_threads){
+        return -1;
+    }
+
+
+
     // create vector of threads
     std::vector<std::thread> threads;
-
+    
     // vector for our forks and philosophers 
     std::vector<Philosopher> philosophers;
-    std::vector<std::mutex*> forks;
-    std::vector<std::mutex*> list(N);
+    std::vector<Fork> forks(n_forks);
 
-    forks.swap(list);
 
     // initialization
-    for(int i = 0 ; i < N-1 ; i++) {
+    for(int i = 0 ; i < n_threads; i++) {
         philosophers.push_back( Philosopher(i, 
                                             forks[lefHand(i)],
-                                            forks[rightHand(i)]
+                                            forks[rightHand(i, n_forks)]
                                                   ));
+        // std::cout << lefHand(i) << " " << rightHand(i, n_forks) << " " << philosophers.size() << std::endl; 
     }
-    for(int i = 0 ; i< N-1 ; i++ )
-        threads.push_back( std::thread(&Philosopher::dine,   philosophers[i]) );
+    // start diner 
+    for(int i = 0 ; i<  n_threads ; i++ )
+         threads.push_back( std::thread(&Philosopher::dine,   philosophers[i]) );
     
-    // // finish 
+    // finish 
     for(std::thread & th : threads)
         th.join();
     
